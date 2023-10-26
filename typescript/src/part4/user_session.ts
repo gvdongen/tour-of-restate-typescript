@@ -57,24 +57,23 @@ const expireTicket = async (
 const checkout = async (ctx: restate.RpcContext, userId: string) => {
   const tickets = (await ctx.get<string[]>("tickets")) ?? [];
 
-  if (tickets.length > 0) {
-    const checkout_success = await ctx
-      .rpc(checkoutApi)
-      .checkout({ userId: userId, tickets: tickets! });
-
-    if (checkout_success) {
-      // mark tickets as sold if checkout was successful
-      for (const ticket_id of tickets) {
-        ctx.send(ticketServiceApi).markAsSold(ticket_id);
-      }
-      ctx.clear("tickets");
-    }
-
-    return checkout_success;
-  } else {
-    // no tickets reserved
+  if (tickets.length === 0) {
     return false;
   }
+
+  const checkoutSuccess = await ctx
+    .rpc(checkoutApi)
+    .checkout({ userId: userId, tickets: tickets! });
+
+  if (checkoutSuccess) {
+    // mark tickets as sold if checkout was successful
+    for (const ticketId of tickets) {
+      ctx.send(ticketServiceApi).markAsSold(ticketId);
+    }
+    ctx.clear("tickets");
+  }
+
+  return checkoutSuccess;
 };
 
 export const userSessionRouter = restate.keyedRouter({
